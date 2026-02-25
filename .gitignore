@@ -1,0 +1,17 @@
+# Credentials and Environment Variables
+.env 
+
+# Logs
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# OS-specific
+.DS_Store
+Thumbs.db
