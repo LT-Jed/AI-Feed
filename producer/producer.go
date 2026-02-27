@@ -158,6 +158,13 @@ func handleRateLimit(resp *GraphQLResponse) {
 }
 
 func compareDates(p ProductData) bool {
+	pDates := getValidDates(p.ProductStatus)
+	iDates := getValidDates(p.ImageStatus)
+
+	if len(pDates) == 0 || len(iDates) == 0 {
+		return false
+	}
+
 	if p.AIJsonRaw == "" || p.AIJsonRaw == "null" {
 		return true
 	}
@@ -168,34 +175,33 @@ func compareDates(p ProductData) bool {
 		return true
 	}
 
-	latestStatus := findLatestDate(append(p.ProductStatus, p.ImageStatus...))
+	allDates := append(pDates, iDates...)
+	var latestStatus time.Time
+	for _, t := range allDates {
+		if t.After(latestStatus) {
+			latestStatus = t
+		}
+	}
 
 	return latestStatus.After(aiData.ProcessTime)
 }
-func findLatestDate(dateStrings []string) time.Time {
-	var latest time.Time
+
+func getValidDates(dateStrings []string) []time.Time {
+	var validDates []time.Time
 	layouts := []string{time.RFC3339, "2006-01-02T15:04:05Z07:00", "2006-01-02"}
 
-	found := false
 	for _, s := range dateStrings {
 		if s == "" || s == "[]" { continue }
 		for _, layout := range layouts {
-			t, err := time.Parse(layout, s)
-			if err == nil {
-				if !found || t.After(latest) {
-					latest = t
-					found = true
-				}
+			if t, err := time.Parse(layout, s); err == nil {
+				validDates = append(validDates, t)
 				break
 			}
 		}
 	}
-
-	if !found {
-		return time.Now()
-	}
-	return latest
+	return validDates
 }
+
 func formatCursor(cursor string) string {
 	if cursor == "" {
 		return "null"
