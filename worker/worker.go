@@ -364,7 +364,10 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 	return sendGraphQL(ctx, mutation, map[string]interface{}{"input": input}, token)
 }
 
-func updateImageAltTexts(ctx context.Context, alts []struct{ ID, Alt string }, token string) error {
+func updateImageAltTexts(ctx context.Context, productID string, images []struct {
+    ID  string `json:"id"`
+    Alt string `json:"alt"`
+}, token string) error {
 	if len(alts) == 0 { return nil }
 	
 	mutation := `
