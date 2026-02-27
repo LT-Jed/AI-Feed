@@ -69,6 +69,13 @@ type GraphQLProductResponse struct {
 				Message string `json:"message"`
 			} `json:"userErrors"`
 		} `json:"fileUpdate"`
+		Shop struct {
+			ID            string `json:"id"`
+			LogMetafield struct {
+				Value string `json:"value"`
+			} `json:"logMetafield"`
+		} `json:"shop"`
+		Product ShopifyProductDetails `json:"product"`
 	} `json:"data"`
 }
 
@@ -136,7 +143,7 @@ func main() {
                     }
                     
                     productID := result[1]
-                    _, err := processTask(ctx, productID)
+                    _, err = processTask(ctx, productID)
                     if err != nil {
                         logToRedis(ctx, "error_logs", "AI", productID, "Process Failed", err.Error())
                     } else {
