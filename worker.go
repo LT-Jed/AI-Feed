@@ -611,7 +611,7 @@ func slugify(t string) string {
 	return strings.Trim(regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(t, "-"), "-")
 }
 
-func logToRedis(ctx, queue, object string, sku string, stage string, message string) {
+func logToRedis(ctx context.Context, queue, object string, sku string, stage string, message string) {
     if rdb != nil {
 		rdb.LPush(ctx, queue, fmt.Sprintf("%s Feed | %s: %s - %s.", object, sku, stage, message))
 	}
@@ -635,7 +635,7 @@ func appendShopLog(ctx context.Context, key string, message string, token string
 	shopID := shopResp.Data.Shop.ID
 
 	var logs []string
-	existingValue := shopResp.Data.Shop.logMetafield.Value
+	existingValue := shopResp.Data.Shop.LogMetafield.Value
 	if existingValue != "" && existingValue != "null" {
 		err := json.Unmarshal([]byte(existingValue), &logs)
 		if err != nil {

@@ -126,7 +126,7 @@ func streamProductsAndQueue(ctx context.Context, token string) {
 				}
 
 				if compareDates(pkg) {
-					clearExistingErrors(rdb, pkg.ID)
+					clearExistingErrors(ctx, rdb, pkg.ID)
 					err := rdb.LPush(ctx, "ai_queue", pkg.ID).Err()
 					if err != nil {
 						log.Printf("Failed to queue product %s: %v", pkg.ID, err)
@@ -274,6 +274,6 @@ func getAccessToken(shopURL string) (string, error) {
 	return "", fmt.Errorf("access_token not found in response")
 }
 
-func clearExistingErrors(rdb *redis.Client, id string) {
+func clearExistingErrors(ctx context.Context, rdb *redis.Client, id string) {
 	rdb.HDel(ctx, "product_errors", id)
 }
