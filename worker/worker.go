@@ -259,6 +259,13 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 		"generationConfig": map[string]interface{}{
 			"response_mime_type": "application/json",
 		},
+		"safetySettings": []map[string]interface{}{
+			{"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+			{"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+			{"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+			{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+			{"category": "HARM_CATEGORY_CIVIC_INTEGRITY", "threshold": "BLOCK_NONE"},
+		},
 	}
 	
 	jsonData, _ := json.Marshal(reqBody)
@@ -289,10 +296,19 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 		PromptFeedback struct {
 			BlockReason string `json:"blockReason"`
 		} `json:"promptFeedback"`
+		Error struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+			Status  string `json:"status"`
+		} `json:"error"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&geminiRaw); err != nil {
 		return nil, err
+	}
+
+	if geminiRaw.Error.Code != 0 {
+		return nil, fmt.Errorf("Gemini API Error: %s (Status: %s)", geminiRaw.Error.Message, geminiRaw.Error.Status)
 	}
 
 	if len(geminiRaw.Candidates) == 0 {
