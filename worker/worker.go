@@ -361,16 +361,19 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 		},
 	}
 
-	_, err = sendGraphQL(ctx, mutation, map[string]interface{}{"input": input}, token)
+	_, err := sendGraphQL(ctx, mutation, map[string]interface{}{"input": input}, token)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
-func updateImageAltTexts(ctx context.Context, productID string, images []struct {
+func updateImageAltTexts(ctx context.Context, images []struct {
     ID  string `json:"id"`
     Alt string `json:"alt"`
 }, token string) error {
-	if len(alts) == 0 { return nil }
+	if len(images) == 0 { return nil }
 	
 	mutation := `
 	mutation fileUpdate($files: [FileUpdateInput!]!) {
@@ -380,13 +383,17 @@ func updateImageAltTexts(ctx context.Context, productID string, images []struct 
 	}`
 
 	var files []map[string]string
-	for _, a := range alts {
+	for _, a := range images {
 		files = append(files, map[string]string{"id": a.ID, "alt": a.Alt})
 	}
 
-	_, err = sendGraphQL(ctx, mutation, map[string]interface{}{"files": files}, token)
 
-	return err
+	_, err := sendGraphQL(ctx, mutation, map[string]interface{}{"files": files}, token)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func fetchDetailedProduct(ctx context.Context, id string, token string) (*ShopifyProductDetails, error) {
