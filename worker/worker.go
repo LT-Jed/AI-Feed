@@ -508,7 +508,7 @@ func startLogListener(ctx context.Context,) {
 
 			parts := strings.SplitN(logMessage, "|", 2)
 			if len(parts) == 2 {
-				feed := strings.TrimSpace(strings.ReplaceAll(parts[0], "feed", ""))
+				feed := strings.ToLower(strings.TrimSpace(strings.ReplaceAll(parts[0], "Feed", "")))
 				details := strings.SplitN(parts[1], ":", 2)
 				if len(details) == 2 {
 					id := strings.TrimSpace(details[0])
@@ -522,10 +522,11 @@ func startLogListener(ctx context.Context,) {
 
 					payload, _ := json.Marshal(errorObj)
 
-					hashKey := "product_errors"
+					hashKey := fmt.Sprintf("%s_errors", feed)
+
 					validFeeds := map[string]bool{"ai": true, "variant": true, "product": true}
-					if !validFeeds[strings.ToLower(feed)] {
-						hashKey = fmt.Sprintf("%s_errors", strings.ToLower(feed))
+					if !validFeeds[feed] {
+						hashKey = "unknown_errors" 
 					}
 
 					rdb.HSet(ctx, hashKey, id, payload)					
