@@ -143,6 +143,7 @@ func main() {
                     }
                     
                     productID := result[1]
+					log.Printf("Worker %d: Beginning process for Product ID: %s", workerID, productID)
                     _, err = processTask(ctx, productID)
                     if err != nil {
                         logToRedis(ctx, "error_logs", "AI", productID, "Process Failed", err.Error())
@@ -498,6 +499,8 @@ func startLogListener(ctx context.Context,) {
 
 		queueName := result[0]
 		logMessage := result[1]
+
+		log.Printf("Log Listener: Processing entry from %s: %s", queueName, logMessage)
 
 		metafieldKey := "log_info"
 		if queueName == "error_logs" {
