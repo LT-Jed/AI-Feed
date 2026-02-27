@@ -280,11 +280,30 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 					Text string `json:"text"`
 				} `json:"parts"`
 			} `json:"content"`
+			FinishReason  string `json:"finishReason"`
+			SafetyRatings []struct {
+				Category    string `json:"category"`
+				Probability string `json:"probability"`
+			} `json:"safetyRatings"`
 		} `json:"candidates"`
+		PromptFeedback struct {
+			BlockReason string `json:"blockReason"`
+		} `json:"promptFeedback"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&geminiRaw); err != nil {
 		return nil, err
+	}
+
+	if len(geminiRaw.Candidates) == 0 {
+		log.Printf("[DEBUG] No candidates returned. Prompt Block Reason: %s", geminiRaw.PromptFeedback.BlockReason)
+		return nil, fmt.Errorf("empty response from Gemini (Prompt Blocked: %s)", geminiRaw.PromptFeedback.BlockReason)
+	}
+
+	candidate := geminiRaw.Candidates[0]
+	if len(candidate.Content.Parts) == 0 {
+		log.Printf("[DEBUG] Empty Parts. FinishReason: %s | Safety: %+v", candidate.FinishReason, candidate.SafetyRatings)
+		return nil, fmt.Errorf("empty response from Gemini (FinishReason: %s)", candidate.FinishReason)
 	}
 
 	if len(geminiRaw.Candidates) == 0 || len(geminiRaw.Candidates[0].Content.Parts) == 0 {
