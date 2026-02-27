@@ -126,7 +126,7 @@ func streamProductsAndQueue(ctx context.Context, token string) {
 				}
 
 				if compareDates(pkg) {
-					clearExistingErrors(rdb, v.ID)
+					clearExistingErrors(rdb, pkg.ID)
 					err := rdb.LPush(ctx, "ai_queue", pkg.ID).Err()
 					if err != nil {
 						log.Printf("Failed to queue product %s: %v", pkg.ID, err)
