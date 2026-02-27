@@ -516,7 +516,7 @@ func startLogListener(ctx context.Context,) {
 	}
 }
 
-func getValidToken(ctx, context.Context, shopURL string) (string, error) {
+func getValidToken(ctx context.Context, shopURL string) (string, error) {
 	tokenLock.RLock()
 	if accessToken != "" && time.Now().Before(tokenExpiry.Add(-5*time.Minute)) {
 		defer tokenLock.RUnlock()
