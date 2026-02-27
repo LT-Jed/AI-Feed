@@ -522,14 +522,7 @@ func startLogListener(ctx context.Context,) {
 
 					payload, _ := json.Marshal(errorObj)
 
-					hashKey := fmt.Sprintf("%s_errors", feed)
-
-					validFeeds := map[string]bool{"ai": true, "variant": true, "product": true}
-					if !validFeeds[feed] {
-						hashKey = "unknown_errors" 
-					}
-
-					rdb.HSet(ctx, hashKey, id, payload)					
+					rdb.HSet(ctx, "product_errors", id, payload)					
 				}
 			}
 		}
