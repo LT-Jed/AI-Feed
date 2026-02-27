@@ -361,7 +361,9 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 		},
 	}
 
-	return sendGraphQL(ctx, mutation, map[string]interface{}{"input": input}, token)
+	_, err = sendGraphQL(ctx, mutation, map[string]interface{}{"input": input}, token)
+
+	return err
 }
 
 func updateImageAltTexts(ctx context.Context, productID string, images []struct {
@@ -382,7 +384,9 @@ func updateImageAltTexts(ctx context.Context, productID string, images []struct 
 		files = append(files, map[string]string{"id": a.ID, "alt": a.Alt})
 	}
 
-	return sendGraphQL(ctx, mutation, map[string]interface{}{"files": files}, token)
+	_, err = sendGraphQL(ctx, mutation, map[string]interface{}{"files": files}, token)
+
+	return err
 }
 
 func fetchDetailedProduct(ctx context.Context, id string, token string) (*ShopifyProductDetails, error) {
