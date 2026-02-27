@@ -16,6 +16,7 @@ import (
 	"sync"
 	"os/signal"
     "syscall"
+	"math/rand"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -169,7 +170,7 @@ func processTask(ctx context.Context, id string) (string, error) {
 		return details.Sku, err
 	}
 
-	err = updateShopifyCore(ctx, id, aiData, token)
+	err = updateShopifyCore(ctx, id, *details, aiData, token)
 	if err != nil {
 		return details.Sku, err
 	}
@@ -253,7 +254,12 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 	}
 	
 	jsonData, _ := json.Marshal(reqBody)
-	resp, err := withRetry(ctx, http.Post(url, "application/json", bytes.NewBuffer(jsonData)))
+	var resp *http.Response
+	err := withRetry(ctx, func() error {
+		var err error
+		resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -409,12 +415,17 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 
 func sendGraphQL(ctx context.Context, query string, vars map[string]interface{}, token string) (*GraphQLProductResponse, error) {
 	body, _ := json.Marshal(map[string]interface{}{"query": query, "variables": vars})
-	req, _ := withRetry(ctx, http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("https://%s/admin/api/2026-01/graphql.json", shopifyURL), bytes.NewBuffer(body)))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Shopify-Access-Token", token)
+	var resp *http.Response
+	err := withRetry(ctx, func() error {
+		req, _ := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("https://%s/admin/api/2026-01/graphql.json", shopifyURL), bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Shopify-Access-Token", token)
 
-	client := &http.Client{Timeout: 20 * time.Second}
-	resp, err := client.Do(req)
+		client := &http.Client{Timeout: 20 * time.Second}
+		var err error
+		resp, err = client.Do(req)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +462,7 @@ func sendGraphQL(ctx context.Context, query string, vars map[string]interface{},
 
 func startLogListener(ctx context.Context,) {
 	for {
-		token, err := getValidToken(ctx, hopifyURL) 
+		token, err := getValidToken(ctx, shopifyURL) 
 		if err != nil {
 			log.Printf("Log listener token error: %v", err)
 			time.Sleep(10 * time.Second)
@@ -543,7 +554,12 @@ func fetchNewTokenFromShopify(ctx context.Context, shopURL string) (string, erro
 	}
 
 	body, _ := json.Marshal(payload)
-	resp, err := withRetry( ctx, http.Post(url, "application/json", bytes.NewBuffer(body)))
+	var resp *http.Response
+	err := withRetry(ctx, func() error {
+		var err error
+		resp, err = http.Post(url, "application/json", bytes.NewBuffer(body))
+		return err
+	})
 	if err != nil {
 		return "", err
 	}
@@ -567,7 +583,16 @@ func fetchNewTokenFromShopify(ctx context.Context, shopURL string) (string, erro
 }
 
 func downloadAndBase64(ctx context.Context, url string) (string, error) {
-	resp, err := withRetry(ctx, http.NewRequestWithContext(ctx, "GET", url, nil))
+	var resp *http.Response
+	err := withRetry(ctx, func() error {
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			return err
+		}
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err = client.Do(req)
+		return err
+	})
 	if err != nil {
 		return "", err
 	}
