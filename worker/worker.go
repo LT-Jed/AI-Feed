@@ -29,7 +29,13 @@ type ShopifyProductDetails struct {
 	Status        string   `json:"status"`
 	Tags          []string `json:"tags"`
 	SapTitle      struct{ Value string } `json:"sapTitle"`
-	Occasion      struct{ Value string } `json:"occasion"`
+	Occasion struct {
+		Reference struct {
+			Field struct {
+				Value string `json:"value"`
+			} `json:"field"`
+		} `json:"reference"`
+	} `json:"occasion"`
 	Media         struct {
 		Edges []struct {
 			Node struct {
@@ -111,6 +117,7 @@ var (
 	accessToken string
 	tokenExpiry time.Time
 	tokenLock   sync.RWMutex
+	model = "gemini-2.5-flash"
 )
 
 func main() {
@@ -199,32 +206,44 @@ func processTask(ctx context.Context, id string) (string, error) {
 
 func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
-	model := "gemini-2.5-flash"
-	url :=  fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
 
-	titlePrompt := fmt.Sprintf("Create a funny & clever title, such as a pun, that is 2 to 4 words on the previous title, avoid using words that include the occasion, tone or recipient: %s", d.SapTitle.Value)
-	if len(strings.Fields(d.SapTitle.Value)) <= 4 {
-		titlePrompt = fmt.Sprintf("Use Title: %s", d.SapTitle.Value)
+	extractNames := func(options []struct{ Name, Value string }) []string {
+		var names []string
+		for _, o := range options {
+			names = append(names, o.Name)
+		}
+		return names
 	}
 
-	promptText :=  fmt.Sprintf(`
-		Product: %s %s. 
-		Genders: %v. 
-		Groups: %v. 
-		Tones: %v. 
+	genders := extractNames(d.GenderOptions.ValidationStatus)
+	groups := extractNames(d.GroupOptions.ValidationStatus)
+	tones := extractNames(d.ToneOptions.ValidationStatus)
 
-		Tasks:
-		1. Pick the best Gender and Group from the provided lists, that best describes the intended recipient.
-		2. Identify if the recipient is under 18 (RecipientKid).
-		3. Pick the best Tone from the provided list.
-		4. %s
-		5. Create an ecommerce description.
-		6. Create a meta-description (140-160 chars).
-		7. Generate 249 keywords based on image context and product details.
-		8. Create SEO alt text (max 130 chars) for each image ID provided.
-		9. Rate content (1-5) for nudity, politics, sexual innuendo, and foul language.
+	var imageIDs []string
+	for _, edge := range d.Media.Edges {
+		imageIDs = append(imageIDs, edge.Node.ID)
+	}
 
-		Return ONLY valid JSON in this format:
+	occasionName := d.Occasion.Reference.Field.Value
+	if occasionName == "" {
+		occasionName = "general"
+	}
+
+	promptText := fmt.Sprintf(`
+		ACT AS AN ECOMMERCE SEO EXPERT.
+		Product: %s (Type: %s, Occasion: %s).
+
+		STRICT CONSTRAINTS:
+		1. RECIPIENT GENDER: Pick EXACTLY one from this list: %v
+		2. RECIPIENT GROUP: Pick EXACTLY one from this list: %v
+		3. TONE: Pick EXACTLY one from this list: %v
+		4. TITLE: Create a punny/clever title (2-4 words). DO NOT use the words: "%s", "%s", or any chosen Tone/Gender/Group names.
+		5. ALT TEXT: Provide an SEO-optimized alt description for EVERY Image ID provided: %v.
+		6. DESCRIPTION: Professional ecommerce HTML description.
+		7. KEYWORDS: Exactly 249 comma-separated keywords.
+
+		Return ONLY valid JSON:
 		{
 			"RecipientGender": "string",
 			"RecipientGroup": "string",
@@ -235,12 +254,12 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 			"MetaDescription": "string",
 			"Keywords": ["string"],
 			"altText": [{"id": "string", "alt": "string"}],
-			"RatingLanguage": int,
-			"RatingSexual": int,
-			"RatingPolitical": int,
-			"RatingNudity": int
+			"RatingLanguage": 1-5,
+			"RatingSexual": 1-5,
+			"RatingPolitical": 1-5,
+			"RatingNudity": 1-5
 		}
-	`, d.Occasion, d.ProductType, d.GenderOptions.ValidationStatus, d.GroupOptions.ValidationStatus, d.ToneOptions.ValidationStatus, titlePrompt)
+	`, d.SapTitle.Value, d.ProductType, occasionName, genders, groups, tones, d.Occasion.Value, d.SapTitle.Value, imageIDs)
 
 	parts := []map[string]interface{}{
 		{"text": promptText},
@@ -349,9 +368,15 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 	if ai.RecipientKid {
 		kid = "kid"
 	}
-	raw_handle := fmt.Sprintf("%s-%s-%s-%s-for%s%s%s-%s", productData.Vendor, productData.ProductType, productData.Occasion.Value, ai.Tone, ai.RecipientGender, ai.RecipientGroup, kid, productData.Sku)
 
-	seo_title := fmt.Sprintf("%s | %s %s %s", ai.Title, ai.Tone, productData.Occasion.Value, productData.ProductType)
+	occasionName := productData.Occasion.Reference.Field.Value
+	if occasionName == "" {
+		occasionName = "general" // Fallback if metaobject or name field is empty
+	}
+
+	raw_handle := fmt.Sprintf("%s-%s-%s-%s-for%s%s%s-%s", productData.Vendor, productData.ProductType, occasionName, ai.Tone, ai.RecipientGender, ai.RecipientGroup, kid, productData.Sku)
+
+	seo_title := fmt.Sprintf("%s | %s %s %s", ai.Title, ai.Tone, occasionName, productData.ProductType)
 
 	var finalTags []string
 	for _, tag := range productData.Tags {
@@ -392,6 +417,13 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 		}
 	}
 
+	fullAiData := map[string]interface{}{
+		"response":    ai,
+		"processTime": currentTime,
+		"model":       model,
+	}
+	fullAiJSON, _ := json.Marshal(fullAiData)
+
 	input := map[string]interface{}{
 		"id": id,
 		"title": ai.Title,
@@ -412,7 +444,7 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 			{"namespace": "custom", "key": "rating_sexual", "value": fmt.Sprintf("%d", ai.RatingSexual)},
 			{"namespace": "custom", "key": "rating_nudity", "value": fmt.Sprintf("%d", ai.RatingNudity)},
 			{"namespace": "custom", "key": "rating_political", "value": fmt.Sprintf("%d", ai.RatingPolitical)},
-			{"namespace": "custom", "key": "ai_json", "value": fmt.Sprintf(`{"processTime": "%s"}`, currentTime)},
+			{"namespace": "custom", "key": "ai_json", "value": string(fullAiJSON)},
 			{"namespace": "custom", "key": "ai_status", "value": string(newStatusValue)},
 		},
 	}
@@ -466,7 +498,13 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 			tags
 			variants(first: 1) { edges { node { sku } } }
 			sapTitle: metafield(namespace: "custom", key: "sapTitle") { value }
-			occasion: metafield(namespace: "custom", key: "occasion") { value }        
+			occasion: metafield(namespace: "custom", key: "occasion") { 
+				reference {
+					... on Metaobject {
+						field(key: "name") { value }
+					}
+				}
+			}    
 			media(first: 50) { edges { node { id ... on MediaImage { image { url } } } } }
 			variantStatus: metafield(namespace: "custom", key: "variant_status") { value }
 			productStatus: metafield(namespace: "custom", key: "product_status") { value }
