@@ -489,7 +489,7 @@ func updateImageAltTexts(ctx context.Context, images []struct {
 }
 
 func fetchDetailedProduct(ctx context.Context, id string, token string) (*ShopifyProductDetails, error) {
-	productQuery := `
+	combinedQuery := `
 	query($id: ID!) {
 		product(id: $id) {
 			id
@@ -512,35 +512,38 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 			imageStatus: metafield(namespace: "custom", key: "image_status") { value }
 			aiStatus: metafield(namespace: "custom", key: "ai_status") { value }
 		}
+		toneOptions: metafieldDefinition(key: "tone", ownerType: PRODUCT) { 
+			validationStatus { name value } 
+		}
+		groupOptions: metafieldDefinition(key: "recipient_group", ownerType: PRODUCT) { 
+			validationStatus { name value } 
+		}
+		genderOptions: metafieldDefinition(key: "recipient_gender", ownerType: PRODUCT) { 
+			validationStatus { name value } 
+		}
 	}`
 
-	toneQuery := `query { toneOptions: metafieldDefinition(key: "tone", ownerType: PRODUCT) { validationStatus { name value } } }`
-	groupQuery := `query { groupOptions: metafieldDefinition(key: "recipient_group", ownerType: PRODUCT) { validationStatus { name value } } }`
-	genderQuery := `query { genderOptions: metafieldDefinition(key: "recipient_gender", ownerType: PRODUCT) { validationStatus { name value } } }`
-
-	resp, err := sendGraphQL(ctx, productQuery, map[string]interface{}{"id": id}, token)
+	resp, err := sendGraphQL(ctx, combinedQuery, map[string]interface{}{"id": id}, token)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("combined query failed: %w", err)
 	}
+
 	product := &resp.Data.Product
 
-	if toneResp, err := sendGraphQL(ctx, toneQuery, nil, token); err == nil {
-		debugJSON, _ := json.Marshal(toneResp)
-		log.Printf("[DEBUG] TONE BODY: %s", string(debugJSON))
-		product.ToneOptions = toneResp.Data.ToneOptions
+	if len(resp.Data.ToneOptions.ValidationStatus) == 0 {
+		log.Printf("[WARNING] Tone options came back empty for Product %s", id)
 	}
+	product.ToneOptions = resp.Data.ToneOptions
 
-	if groupResp, err := sendGraphQL(ctx, groupQuery, nil, token); err == nil {
-		debugJSON, _ := json.Marshal(groupResp)
-		log.Printf("[DEBUG] GROUP BODY: %s", string(debugJSON))
-		product.GroupOptions = groupResp.Data.GroupOptions
+	if len(resp.Data.GroupOptions.ValidationStatus) == 0 {
+		log.Printf("[WARNING] Group options came back empty for Product %s", id)
 	}
+	product.GroupOptions = resp.Data.GroupOptions
 
-	if genderResp, err := sendGraphQL(ctx, genderQuery, nil, token); err == nil {
-		debugJSON, _ := json.Marshal(genderResp)
-		log.Printf("[DEBUG] GENDER BODY: %s", string(debugJSON))
-		product.GenderOptions = genderResp.Data.GenderOptions
+	if len(resp.Data.GenderOptions.ValidationStatus) == 0 {
+		log.Printf("[WARNING] Gender options came back empty for Product %s", id)
 	}
+	product.GenderOptions = resp.Data.GenderOptions
 
 	if len(product.Variants.Edges) > 0 {
 		product.Sku = strings.Split(product.Variants.Edges[0].Node.Sku, "-")[0]
