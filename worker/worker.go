@@ -51,6 +51,9 @@ type ShopifyProductDetails struct {
 	ProductStatus []string
 	VariantStatus []string
 	AiStatusRaw   string
+	ToneOptions   struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"toneOptions"`
+	GroupOptions  struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"groupOptions"`
+	GenderOptions struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"genderOptions"`
 }
 
 type GraphQLProductResponse struct {
@@ -78,7 +81,8 @@ type GraphQLProductResponse struct {
 		Product ShopifyProductDetails `json:"product"`
 		ToneOptions   struct{ ValidationStatus struct{ Name, Value string } } `json:"toneOptions"`
 		GroupOptions  struct{ ValidationStatus struct{ Name, Value string } } `json:"groupOptions"`
-		GenderOptions struct{ ValidationStatus struct{ Name, Value string } } `json:"genderOptions"`	} `json:"data"`
+		GenderOptions struct{ ValidationStatus struct{ Name, Value string } } `json:"genderOptions"`
+	} `json:"data"`
 }
 
 type GeminiResponse struct {
@@ -204,9 +208,9 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 
 	promptText :=  fmt.Sprintf(`
 		Product: %s %s. 
-		Genders: %s. 
-		Groups: %s. 
-		Tones: %s. 
+		Genders: %v. 
+		Groups: %v. 
+		Tones: %v. 
 
 		Tasks:
 		1. Pick the best Gender and Group from the provided lists, that best describes the intended recipient.
@@ -235,7 +239,7 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 			"RatingPolitical": int,
 			"RatingNudity": int
 		}
-	`, d.Occasion, d.ProductType, d.GenderOptions, d.GroupOptions, d.ToneOptions, titlePrompt)
+	`, d.Occasion, d.ProductType, d.GenderOptions.ValidationStatus, d.GroupOptions.ValidationStatus, d.ToneOptions.ValidationStatus, titlePrompt)
 
 	parts := []map[string]interface{}{
 		{"text": promptText},
