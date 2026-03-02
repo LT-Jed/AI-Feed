@@ -57,6 +57,9 @@ type ShopifyProductDetails struct {
 }
 
 type GraphQLProductResponse struct {
+	Errors []struct {
+		Message string `json:"message"`
+	} `json:"errors"`
 	Data struct {
 		ProductUpdate struct {
 			UserErrors []struct {
@@ -444,16 +447,16 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 		tags
         variants(first: 1) { edges { node { sku } } }
         sapTitle: metafield(namespace: "custom", key: "sapTitle") { value }
-        occasion: metafield(namespace: "custom", key: "occasion") { value }
-        toneOptions: metafieldDefinition(namespace: "custom", key: "tone", ownerType: PRODUCT) { validationStatus { name value } }
-      	groupOptions: metafieldDefinition(namespace: "custom", key: "recipient_group", ownerType: PRODUCT) { validationStatus { name value } }
-      	genderOptions: metafieldDefinition(namespace: "custom", key: "recipient_gender", ownerType: PRODUCT) { validationStatus { name value } }
-        media(first: 50) { edges { node { id ... on MediaImage { image { url } } } } }
+        occasion: metafield(namespace: "custom", key: "occasion") { value }        
+		media(first: 50) { edges { node { id ... on MediaImage { image { url } } } } }
 		variantStatus: metafield(namespace: "custom", key: "variant_status") { value }
 		productStatus: metafield(namespace: "custom", key: "product_status") { value }
 		imageStatus: metafield(namespace: "custom", key: "image_status") { value }
 		aiStatus: metafield(namespace: "custom", key: "ai_status") { value }
       }
+	  toneOptions: metafieldDefinition(namespace: "custom", key: "tone", ownerType: PRODUCT) { validationStatus { name value } }
+	  groupOptions: metafieldDefinition(namespace: "custom", key: "recipient_group", ownerType: PRODUCT) { validationStatus { name value } }
+	  genderOptions: metafieldDefinition(namespace: "custom", key: "recipient_gender", ownerType: PRODUCT) { validationStatus { name value } }
     }
 	`	
 
@@ -463,6 +466,10 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 	}
 
 	product := &resp.Data.Product
+	
+	product.ToneOptions = resp.Data.ToneOptions
+    product.GroupOptions = resp.Data.GroupOptions
+    product.GenderOptions = resp.Data.GenderOptions
 
 	if len(product.Variants.Edges) > 0 {
 		product.Sku = strings.Split(product.Variants.Edges[0].Node.Sku, "-")[0]
@@ -510,6 +517,10 @@ func sendGraphQL(ctx context.Context, query string, vars map[string]interface{},
 	if err := json.Unmarshal(bodyBytes, &res); err != nil {
         return nil, err
     }
+
+	if len(res.Errors) > 0 {
+		return &res, fmt.Errorf("shopify graphql error: %s", res.Errors[0].Message)
+	}
 	
 	if len(res.Data.ProductUpdate.UserErrors) > 0 {
         return &res, fmt.Errorf("shopify mutation error: %s", res.Data.ProductUpdate.UserErrors[0].Message)
