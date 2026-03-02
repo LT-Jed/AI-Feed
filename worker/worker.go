@@ -361,8 +361,8 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 	}
 
 	if (len(ai.Keywords) + len(finalTags)) > 250 {
-		const length := 250 - len(finalTags)
-    	ai.Keywords = ai.Keywords[:length]
+		const tempLength := 250 - len(finalTags)
+    	ai.Keywords = ai.Keywords[:tempLength]
 	}
 
 	finalTags = append(finalTags, ai.Keywords...)
