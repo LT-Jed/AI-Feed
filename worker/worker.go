@@ -524,6 +524,7 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 				validationStatus { name value }
 			}
 		}
+	}
 	}`
 
 	resp, err := sendGraphQL(ctx, combinedQuery, map[string]interface{}{"id": id}, token)
