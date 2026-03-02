@@ -452,7 +452,7 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 			"description": ai.MetaDescription,
 			"title": seo_title,
 		},
-		"metafields": []map[string]string{
+		"metafields": []map[string]interface{}{
 			{"namespace": "custom", "key": "tone",             "type": "single_line_text_field", "value": ai.Tone},
 			{"namespace": "custom", "key": "recipient_child",  "type": "boolean",                "value": fmt.Sprintf("%v", ai.RecipientKid)},
 			{"namespace": "custom", "key": "recipient_gender", "type": "single_line_text_field", "value": ai.RecipientGender},
@@ -461,8 +461,8 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 			{"namespace": "custom", "key": "rating_sexual",    "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingSexual)},
 			{"namespace": "custom", "key": "rating_nudity",    "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingNudity)},
 			{"namespace": "custom", "key": "rating_political", "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingPolitical)},
-			{"namespace": "custom", "key": "ai_json",          "type": "json",                   "value": string(fullAiJSON)},
-			{"namespace": "custom", "key": "ai_status",        "type": "list.date_time",         "value": newStatusValue},
+			{"namespace": "custom", "key": "ai_json",          "type": "json",                   "value": json.RawMessage(fullAiJSON)},
+			{"namespace": "custom", "key": "ai_status",        "type": "list.date_time",         "value": string(newStatusValue)},
 		},
 	}
 
