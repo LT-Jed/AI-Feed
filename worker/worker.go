@@ -417,7 +417,8 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 		},
 	}
 
-	log.Printf("[DEBUG] Shopify Body: %s", string(input))
+	inputJSON, _ := json.Marshal(input)
+    log.Printf("[DEBUG] Shopify Body: %s", string(inputJSON))
 
 	_, err := sendGraphQL(ctx, mutation, map[string]interface{}{"input": input}, token)
 	if err != nil {
