@@ -473,6 +473,7 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 
 func sendGraphQL(ctx context.Context, query string, vars map[string]interface{}, token string) (*GraphQLProductResponse, error) {
 	body, _ := json.Marshal(map[string]interface{}{"query": query, "variables": vars})
+	log.Printf("[DEBUG] Shopify Body: %s", string(body))
 	var resp *http.Response
 	err := withRetry(ctx, func() error {
 		req, _ := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("https://%s/admin/api/2026-01/graphql.json", shopifyURL), bytes.NewBuffer(body))
@@ -503,7 +504,10 @@ func sendGraphQL(ctx context.Context, query string, vars map[string]interface{},
     }
 
 	var res GraphQLProductResponse
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	log.Printf("[DEBUG] Shopify Response: %s", string(bodyBytes))
+
+	if err := json.Unmarshal(bodyBytes, &res); err != nil {
         return nil, err
     }
 	
