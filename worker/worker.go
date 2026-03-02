@@ -416,10 +416,14 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 	currentTime := time.Now().Format(time.RFC3339)
 	var statusHistory []string
 	if productData.AiStatusRaw != "" {
-		json.Unmarshal([]byte(productData.AiStatusRaw), &statusHistory)
+		for _, ts := range strings.Split(productData.AiStatusRaw, "\n") {
+			if ts != "" {
+				statusHistory = append(statusHistory, ts)
+			}
+		}
 	}
 	statusHistory = append(statusHistory, currentTime)
-	newStatusValue, _ := json.Marshal(statusHistory)
+	newStatusValue := strings.Join(statusHistory, "\n")
 
 	newStatus := productData.Status
 	if productData.Status == "DRAFT" {
@@ -449,16 +453,16 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 			"title": seo_title,
 		},
 		"metafields": []map[string]string{
-			{"namespace": "custom", "key": "tone", "value": ai.Tone},
-			{"namespace": "custom", "key": "recipient_child", "value": fmt.Sprintf("%v", ai.RecipientKid)},
-			{"namespace": "custom", "key": "recipient_gender", "value": ai.RecipientGender},
-			{"namespace": "custom", "key": "recipient_group", "value": ai.RecipientGroup},
-			{"namespace": "custom", "key": "rating_language", "value": fmt.Sprintf("%d", ai.RatingLanguage)},
-			{"namespace": "custom", "key": "rating_sexual", "value": fmt.Sprintf("%d", ai.RatingSexual)},
-			{"namespace": "custom", "key": "rating_nudity", "value": fmt.Sprintf("%d", ai.RatingNudity)},
-			{"namespace": "custom", "key": "rating_political", "value": fmt.Sprintf("%d", ai.RatingPolitical)},
-			{"namespace": "custom", "key": "ai_json", "value": string(fullAiJSON)},
-			{"namespace": "custom", "key": "ai_status", "value": string(newStatusValue)},
+			{"namespace": "custom", "key": "tone",             "type": "single_line_text_field", "value": ai.Tone},
+			{"namespace": "custom", "key": "recipient_child",  "type": "boolean",                "value": fmt.Sprintf("%v", ai.RecipientKid)},
+			{"namespace": "custom", "key": "recipient_gender", "type": "single_line_text_field", "value": ai.RecipientGender},
+			{"namespace": "custom", "key": "recipient_group",  "type": "single_line_text_field", "value": ai.RecipientGroup},
+			{"namespace": "custom", "key": "rating_language",  "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingLanguage)},
+			{"namespace": "custom", "key": "rating_sexual",    "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingSexual)},
+			{"namespace": "custom", "key": "rating_nudity",    "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingNudity)},
+			{"namespace": "custom", "key": "rating_political", "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingPolitical)},
+			{"namespace": "custom", "key": "ai_json",          "type": "json",                   "value": string(fullAiJSON)},
+			{"namespace": "custom", "key": "ai_status",        "type": "list.date_time",         "value": newStatusValue},
 		},
 	}
 
@@ -552,6 +556,8 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 	if len(product.Variants.Edges) > 0 {
 		product.Sku = strings.Split(product.Variants.Edges[0].Node.Sku, "-")[0]
 	}
+
+	product.AiStatusRaw = product.AiStatus.Value
 
 	return product, nil
 }
