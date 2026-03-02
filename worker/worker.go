@@ -320,13 +320,11 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 	}
 
 	if len(geminiRaw.Candidates) == 0 {
-		log.Printf("[DEBUG] No candidates returned. Prompt Block Reason: %s", geminiRaw.PromptFeedback.BlockReason)
 		return nil, fmt.Errorf("empty response from Gemini (Prompt Blocked: %s)", geminiRaw.PromptFeedback.BlockReason)
 	}
 
 	candidate := geminiRaw.Candidates[0]
 	if len(candidate.Content.Parts) == 0 {
-		log.Printf("[DEBUG] Empty Parts. FinishReason: %s | Safety: %+v", candidate.FinishReason, candidate.SafetyRatings)
 		return nil, fmt.Errorf("empty response from Gemini (FinishReason: %s)", candidate.FinishReason)
 	}
 
@@ -361,6 +359,12 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 			finalTags = append(finalTags, tag)
 		}
 	}
+
+	if (len(ai.Keywords) + len(finalTags)) > 250 {
+		const length := 250 - len(finalTags)
+    	ai.Keywords = ai.Keywords[:length]
+	}
+
 	finalTags = append(finalTags, ai.Keywords...)
 
 	currentTime := time.Now().Format(time.RFC3339)
@@ -404,6 +408,8 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 			{"namespace": "custom", "key": "ai_status", "value": string(newStatusValue)},
 		},
 	}
+
+	log.Printf("[DEBUG] Shopify Body: %s", string(input))
 
 	_, err := sendGraphQL(ctx, mutation, map[string]interface{}{"input": input}, token)
 	if err != nil {
@@ -491,7 +497,6 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 
 func sendGraphQL(ctx context.Context, query string, vars map[string]interface{}, token string) (*GraphQLProductResponse, error) {
 	body, _ := json.Marshal(map[string]interface{}{"query": query, "variables": vars})
-	log.Printf("[DEBUG] Shopify Body: %s", string(body))
 	var resp *http.Response
 	err := withRetry(ctx, func() error {
 		req, _ := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("https://%s/admin/api/2026-01/graphql.json", shopifyURL), bytes.NewBuffer(body))
@@ -523,7 +528,6 @@ func sendGraphQL(ctx context.Context, query string, vars map[string]interface{},
 
 	var res GraphQLProductResponse
 	bodyBytes, _ := io.ReadAll(resp.Body)
-	log.Printf("[DEBUG] Shopify Response: %s", string(bodyBytes))
 
 	if err := json.Unmarshal(bodyBytes, &res); err != nil {
         return nil, err
