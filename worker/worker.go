@@ -360,12 +360,20 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 		}
 	}
 
-	if (len(ai.Keywords) + len(finalTags)) > 250 {
-		const tempLength := 250 - len(finalTags)
-    	ai.Keywords = ai.Keywords[:tempLength]
-	}
+	maxTotal := 250
+	currentCount := len(finalTags)
+	remainingBudget := maxTotal - currentCount
 
-	finalTags = append(finalTags, ai.Keywords...)
+	if remainingBudget > 0 {
+		if len(ai.Keywords) > remainingBudget {
+			ai.Keywords = ai.Keywords[:remainingBudget]
+		}
+    	finalTags = append(finalTags, ai.Keywords...)
+	} else {
+		if len(finalTags) > maxTotal {
+			finalTags = finalTags[:maxTotal]
+		}
+	}
 
 	currentTime := time.Now().Format(time.RFC3339)
 	var statusHistory []string
