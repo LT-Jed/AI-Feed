@@ -351,14 +351,11 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 		return nil, fmt.Errorf("empty response from Gemini (FinishReason: %s)", candidate.FinishReason)
 	}
 
-	if len(geminiRaw.Candidates) == 0 || len(geminiRaw.Candidates[0].Content.Parts) == 0 {
-		return nil, fmt.Errorf("empty response from Gemini")
-	}
-
 	var result GeminiResponse
 	err = json.Unmarshal([]byte(geminiRaw.Candidates[0].Content.Parts[0].Text), &result)
 
-	log.Printf("[DEBUG] AI BODY: %s", string(result))
+	debugJSON, _ := json.Marshal(result)
+	log.Printf("[DEBUG] AI BODY: %s", string(debugJSON))
 
 	return &result, err
 }
