@@ -30,9 +30,6 @@ type ShopifyProductDetails struct {
 	Tags          []string `json:"tags"`
 	SapTitle      struct{ Value string } `json:"sapTitle"`
 	Occasion      struct{ Value string } `json:"occasion"`
-	ToneOptions   struct{ ValidationStatus struct{ Name, Value string } } `json:"toneOptions"`
-	GroupOptions  struct{ ValidationStatus struct{ Name, Value string } } `json:"groupOptions"`
-	GenderOptions struct{ ValidationStatus struct{ Name, Value string } } `json:"genderOptions"`
 	Media         struct {
 		Edges []struct {
 			Node struct {
@@ -79,7 +76,9 @@ type GraphQLProductResponse struct {
 			} `json:"logMetafield"`
 		} `json:"shop"`
 		Product ShopifyProductDetails `json:"product"`
-	} `json:"data"`
+		ToneOptions   struct{ ValidationStatus struct{ Name, Value string } } `json:"toneOptions"`
+		GroupOptions  struct{ ValidationStatus struct{ Name, Value string } } `json:"groupOptions"`
+		GenderOptions struct{ ValidationStatus struct{ Name, Value string } } `json:"genderOptions"`	} `json:"data"`
 }
 
 type GeminiResponse struct {
@@ -466,7 +465,7 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 	}
 
 	product := &resp.Data.Product
-	
+
 	product.ToneOptions = resp.Data.ToneOptions
     product.GroupOptions = resp.Data.GroupOptions
     product.GenderOptions = resp.Data.GenderOptions
