@@ -192,7 +192,8 @@ func processTask(ctx context.Context, id string) (string, error) {
 
 func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
-	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey
+	model := "gemini-2.5-flash"
+	url :=  fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
 
 	titlePrompt := fmt.Sprintf("Create a funny & clever title, such as a pun, that is 2 to 4 words on the previous title, avoid using words that include the occasion, tone or recipient: %s", d.SapTitle.Value)
 	if len(strings.Fields(d.SapTitle.Value)) <= 4 {
