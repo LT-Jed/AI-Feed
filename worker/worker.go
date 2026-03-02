@@ -259,7 +259,7 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 			"RatingPolitical": 1-5,
 			"RatingNudity": 1-5
 		}
-	`, d.SapTitle.Value, d.ProductType, occasionName, genders, groups, tones, d.Occasion.Value, d.SapTitle.Value, imageIDs)
+	`, d.SapTitle.Value, d.ProductType, occasionName, genders, groups, tones, occasionName, d.SapTitle.Value, imageIDs)
 
 	parts := []map[string]interface{}{
 		{"text": promptText},
