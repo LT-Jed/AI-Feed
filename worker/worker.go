@@ -89,7 +89,7 @@ type GraphQLProductResponse struct {
 		MetafieldDefinitions struct {
 			Edges []struct {
 				Node struct {
-					Key         string `json:"key"`
+					Key              string `json:"key"`
 					Validations []struct{ Name, Value string } `json:"validations"`
 				} `json:"node"`
 			} `json:"edges"`
@@ -518,10 +518,11 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 			aiStatus: metafield(namespace: "custom", key: "ai_status") { value }
 		}
 		metafieldDefinitions(ownerType: PRODUCT, first: 50) {
-		edges {
-			node {
-				key
-				validations { name value }
+			edges {
+				node {
+					key
+					validations { name value }
+				}
 			}
 		}
 	}`
