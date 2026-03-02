@@ -86,9 +86,14 @@ type GraphQLProductResponse struct {
 			} `json:"logMetafield"`
 		} `json:"shop"`
 		Product ShopifyProductDetails `json:"product"`
-		ToneOptions   struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"toneOptions"`
-		GroupOptions  struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"groupOptions"`
-		GenderOptions struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"genderOptions"`
+		MetafieldDefinitions struct {
+			Edges []struct {
+				Node struct {
+					Key              string `json:"key"`
+					ValidationStatus []struct{ Name, Value string } `json:"validationStatus"`
+				} `json:"node"`
+			} `json:"edges"`
+		} `json:"metafieldDefinitions"`
 	} `json:"data"`
 }
 
@@ -512,14 +517,12 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 			imageStatus: metafield(namespace: "custom", key: "image_status") { value }
 			aiStatus: metafield(namespace: "custom", key: "ai_status") { value }
 		}
-		toneOptions: metafieldDefinition(key: "tone", ownerType: PRODUCT) { 
-			validationStatus { name value } 
-		}
-		groupOptions: metafieldDefinition(key: "recipient_group", ownerType: PRODUCT) { 
-			validationStatus { name value } 
-		}
-		genderOptions: metafieldDefinition(key: "recipient_gender", ownerType: PRODUCT) { 
-			validationStatus { name value } 
+		metafieldDefinitions(ownerType: PRODUCT, first: 50) {
+		edges {
+			node {
+				key
+				validationStatus { name value }
+			}
 		}
 	}`
 
@@ -530,20 +533,16 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 
 	product := &resp.Data.Product
 
-	if len(resp.Data.ToneOptions.ValidationStatus) == 0 {
-		log.Printf("[WARNING] Tone options came back empty for Product %s", id)
+	for _, edge := range resp.Data.MetafieldDefinitions.Edges {
+		switch edge.Node.Key {
+		case "tone":
+			product.ToneOptions.ValidationStatus = edge.Node.ValidationStatus
+		case "recipient_group":
+			product.GroupOptions.ValidationStatus = edge.Node.ValidationStatus
+		case "recipient_gender":
+			product.GenderOptions.ValidationStatus = edge.Node.ValidationStatus
+		}
 	}
-	product.ToneOptions = resp.Data.ToneOptions
-
-	if len(resp.Data.GroupOptions.ValidationStatus) == 0 {
-		log.Printf("[WARNING] Group options came back empty for Product %s", id)
-	}
-	product.GroupOptions = resp.Data.GroupOptions
-
-	if len(resp.Data.GenderOptions.ValidationStatus) == 0 {
-		log.Printf("[WARNING] Gender options came back empty for Product %s", id)
-	}
-	product.GenderOptions = resp.Data.GenderOptions
 
 	if len(product.Variants.Edges) > 0 {
 		product.Sku = strings.Split(product.Variants.Edges[0].Node.Sku, "-")[0]
