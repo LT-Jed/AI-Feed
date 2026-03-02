@@ -442,25 +442,31 @@ func updateImageAltTexts(ctx context.Context, images []struct {
 func fetchDetailedProduct(ctx context.Context, id string, token string) (*ShopifyProductDetails, error) {
 	query := `
 	query($id: ID!) {
-      product(id: $id) {
-	  	id
-        productType
-		vendor
-		status
-		tags
-        variants(first: 1) { edges { node { sku } } }
-        sapTitle: metafield(namespace: "custom", key: "sapTitle") { value }
-        occasion: metafield(namespace: "custom", key: "occasion") { value }        
-		media(first: 50) { edges { node { id ... on MediaImage { image { url } } } } }
-		variantStatus: metafield(namespace: "custom", key: "variant_status") { value }
-		productStatus: metafield(namespace: "custom", key: "product_status") { value }
-		imageStatus: metafield(namespace: "custom", key: "image_status") { value }
-		aiStatus: metafield(namespace: "custom", key: "ai_status") { value }
-      }
-	  toneOptions: metafieldDefinition(namespace: "custom", key: "tone", ownerType: PRODUCT) { validationStatus { name value } }
-	  groupOptions: metafieldDefinition(namespace: "custom", key: "recipient_group", ownerType: PRODUCT) { validationStatus { name value } }
-	  genderOptions: metafieldDefinition(namespace: "custom", key: "recipient_gender", ownerType: PRODUCT) { validationStatus { name value } }
-    }
+		product(id: $id) {
+			id
+			productType
+			vendor
+			status
+			tags
+			variants(first: 1) { edges { node { sku } } }
+			sapTitle: metafield(namespace: "custom", key: "sapTitle") { value }
+			occasion: metafield(namespace: "custom", key: "occasion") { value }        
+			media(first: 50) { edges { node { id ... on MediaImage { image { url } } } } }
+			variantStatus: metafield(namespace: "custom", key: "variant_status") { value }
+			productStatus: metafield(namespace: "custom", key: "product_status") { value }
+			imageStatus: metafield(namespace: "custom", key: "image_status") { value }
+			aiStatus: metafield(namespace: "custom", key: "ai_status") { value }
+		}
+		toneOptions: metafieldDefinition(namespace: "custom", key: "tone", ownerType: PRODUCT) { 
+			validationStatus { name value } 
+		}
+		groupOptions: metafieldDefinition(namespace: "custom", key: "recipient_group", ownerType: PRODUCT) { 
+			validationStatus { name value } 
+		}
+		genderOptions: metafieldDefinition(namespace: "custom", key: "recipient_gender", ownerType: PRODUCT) { 
+			validationStatus { name value } 
+		}
+	}
 	`	
 
 	resp, err := sendGraphQL(ctx, query, map[string]interface{}{"id": id}, token)
