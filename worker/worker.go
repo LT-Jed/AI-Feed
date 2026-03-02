@@ -47,9 +47,10 @@ type ShopifyProductDetails struct {
 			} `json:"node"`
 		} `json:"edges"`
 	} `json:"variants"`
-	ImageStatus   []string
-	ProductStatus []string
-	VariantStatus []string
+	VariantStatus struct{ Value string } `json:"variantStatus"`
+	ProductStatus struct{ Value string } `json:"productStatus"`
+	ImageStatus   struct{ Value string } `json:"imageStatus"`
+	AiStatus      struct{ Value string } `json:"aiStatus"`
 	AiStatusRaw   string
 	ToneOptions   struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"toneOptions"`
 	GroupOptions  struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"groupOptions"`
@@ -372,9 +373,9 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 
 	newStatus := productData.Status
 	if productData.Status == "DRAFT" {
-		if len(productData.ImageStatus) > 0 && 
-		   len(productData.ProductStatus) > 0 && 
-		   len(productData.VariantStatus) > 0 {
+		if productData.ImageStatus.Value != "" && 
+		   productData.ProductStatus.Value != "" && 
+		   productData.VariantStatus.Value != "" {
 			newStatus = "ACTIVE"
 		}
 	}
