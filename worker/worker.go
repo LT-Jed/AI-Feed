@@ -58,9 +58,9 @@ type ShopifyProductDetails struct {
 	ImageStatus   struct{ Value string } `json:"imageStatus"`
 	AiStatus      struct{ Value string } `json:"aiStatus"`
 	AiStatusRaw   string
-	ToneOptions   struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"toneOptions"`
-	GroupOptions  struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"groupOptions"`
-	GenderOptions struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"genderOptions"`
+	ToneOptions   struct{ Validations []struct{ Name, Value string } `json:"validations"` } `json:"toneOptions"`
+	GroupOptions  struct{ Validations []struct{ Name, Value string } `json:"validations"` } `json:"groupOptions"`
+	GenderOptions struct{ Validations []struct{ Name, Value string } `json:"validations"` } `json:"genderOptions"`
 }
 
 type GraphQLProductResponse struct {
@@ -89,8 +89,8 @@ type GraphQLProductResponse struct {
 		MetafieldDefinitions struct {
 			Edges []struct {
 				Node struct {
-					Key              string `json:"key"`
-					ValidationStatus []struct{ Name, Value string } `json:"validationStatus"`
+					Key         string `json:"key"`
+					Validations []struct{ Name, Value string } `json:"validations"`
 				} `json:"node"`
 			} `json:"edges"`
 		} `json:"metafieldDefinitions"`
@@ -221,9 +221,9 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 		return names
 	}
 
-	genders := extractNames(d.GenderOptions.ValidationStatus)
-	groups := extractNames(d.GroupOptions.ValidationStatus)
-	tones := extractNames(d.ToneOptions.ValidationStatus)
+	genders := extractNames(d.GenderOptions.Validations)
+	groups := extractNames(d.GroupOptions.Validations)
+	tones := extractNames(d.ToneOptions.Validations)
 
 	var imageIDs []string
 	for _, edge := range d.Media.Edges {
@@ -521,10 +521,9 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 		edges {
 			node {
 				key
-				validationStatus { name value }
+				validations { name value }
 			}
 		}
-	}
 	}`
 
 	resp, err := sendGraphQL(ctx, combinedQuery, map[string]interface{}{"id": id}, token)
@@ -537,11 +536,11 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 	for _, edge := range resp.Data.MetafieldDefinitions.Edges {
 		switch edge.Node.Key {
 		case "tone":
-			product.ToneOptions.ValidationStatus = edge.Node.ValidationStatus
+			product.ToneOptions.Validations = edge.Node.Validations
 		case "recipient_group":
-			product.GroupOptions.ValidationStatus = edge.Node.ValidationStatus
+			product.GroupOptions.Validations = edge.Node.Validations
 		case "recipient_gender":
-			product.GenderOptions.ValidationStatus = edge.Node.ValidationStatus
+			product.GenderOptions.Validations = edge.Node.Validations
 		}
 	}
 
