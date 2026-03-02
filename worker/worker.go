@@ -214,11 +214,15 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
 
 	extractNames := func(options []struct{ Name, Value string }) []string {
-		var names []string
 		for _, o := range options {
-			names = append(names, o.Name)
+			if o.Name == "choices" {
+				var choices []string
+				if err := json.Unmarshal([]byte(o.Value), &choices); err == nil {
+					return choices
+				}
+			}
 		}
-		return names
+		return nil
 	}
 
 	genders := extractNames(d.GenderOptions.Validations)
