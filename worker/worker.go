@@ -440,7 +440,7 @@ func updateImageAltTexts(ctx context.Context, images []struct {
 }
 
 func fetchDetailedProduct(ctx context.Context, id string, token string) (*ShopifyProductDetails, error) {
-	query := `
+	productQuery := `
 	query($id: ID!) {
 		product(id: $id) {
 			id
@@ -457,28 +457,29 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 			imageStatus: metafield(namespace: "custom", key: "image_status") { value }
 			aiStatus: metafield(namespace: "custom", key: "ai_status") { value }
 		}
-		toneOptions: metafieldDefinition(namespace: "custom", key: "tone", ownerType: PRODUCT) { 
-			validationStatus { name value } 
-		}
-		groupOptions: metafieldDefinition(namespace: "custom", key: "recipient_group", ownerType: PRODUCT) { 
-			validationStatus { name value } 
-		}
-		genderOptions: metafieldDefinition(namespace: "custom", key: "recipient_gender", ownerType: PRODUCT) { 
-			validationStatus { name value } 
-		}
-	}
-	`	
+	}`
 
-	resp, err := sendGraphQL(ctx, query, map[string]interface{}{"id": id}, token)
+	toneQuery := `query { toneOptions: metafieldDefinition(key: "tone", ownerType: PRODUCT) { validationStatus { name value } } }`
+	groupQuery := `query { groupOptions: metafieldDefinition(key: "recipient_group", ownerType: PRODUCT) { validationStatus { name value } } }`
+	genderQuery := `query { genderOptions: metafieldDefinition(key: "recipient_gender", ownerType: PRODUCT) { validationStatus { name value } } }`
+
+	resp, err := sendGraphQL(ctx, productQuery, map[string]interface{}{"id": id}, token)
 	if err != nil {
 		return nil, err
 	}
-
 	product := &resp.Data.Product
 
-	product.ToneOptions = resp.Data.ToneOptions
-    product.GroupOptions = resp.Data.GroupOptions
-    product.GenderOptions = resp.Data.GenderOptions
+	if toneResp, err := sendGraphQL(ctx, toneQuery, nil, token); err == nil {
+		product.ToneOptions = toneResp.Data.ToneOptions
+	}
+
+	if groupResp, err := sendGraphQL(ctx, groupQuery, nil, token); err == nil {
+		product.GroupOptions = groupResp.Data.GroupOptions
+	}
+
+	if genderResp, err := sendGraphQL(ctx, genderQuery, nil, token); err == nil {
+		product.GenderOptions = genderResp.Data.GenderOptions
+	}
 
 	if len(product.Variants.Edges) > 0 {
 		product.Sku = strings.Split(product.Variants.Edges[0].Node.Sku, "-")[0]
