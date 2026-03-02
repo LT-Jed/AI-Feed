@@ -79,9 +79,9 @@ type GraphQLProductResponse struct {
 			} `json:"logMetafield"`
 		} `json:"shop"`
 		Product ShopifyProductDetails `json:"product"`
-		ToneOptions   struct{ ValidationStatus struct{ Name, Value string } } `json:"toneOptions"`
-		GroupOptions  struct{ ValidationStatus struct{ Name, Value string } } `json:"groupOptions"`
-		GenderOptions struct{ ValidationStatus struct{ Name, Value string } } `json:"genderOptions"`
+		ToneOptions   struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"toneOptions"`
+		GroupOptions  struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"groupOptions"`
+		GenderOptions struct{ ValidationStatus []struct{ Name, Value string } `json:"validationStatus"` } `json:"genderOptions"`
 	} `json:"data"`
 }
 
