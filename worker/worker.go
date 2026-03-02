@@ -239,10 +239,6 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 		occasionName = "general"
 	}
 
-	log.Printf("[DEBUG] GENDERS: %v", genders)
-	log.Printf("[DEBUG] GROUP: %v", groups)
-	log.Printf("[DEBUG] TONES: %v", tones)
-
 	promptText := fmt.Sprintf(`
 		ACT AS AN ECOMMERCE SEO EXPERT.
 		Product: %s (Type: %s, Occasion: %s).
@@ -363,9 +359,6 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 	var result GeminiResponse
 	err = json.Unmarshal([]byte(geminiRaw.Candidates[0].Content.Parts[0].Text), &result)
 
-	debugJSON, _ := json.Marshal(result)
-	log.Printf("[DEBUG] AI BODY: %s", string(debugJSON))
-
 	return &result, err
 }
 
@@ -413,17 +406,17 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 		}
 	}
 
-	currentTime := time.Now().Format(time.RFC3339)
+	currentTime := time.Now().UTC().Format(time.RFC3339)
 	var statusHistory []string
 	if productData.AiStatusRaw != "" {
-		for _, ts := range strings.Split(productData.AiStatusRaw, "\n") {
-			if ts != "" {
-				statusHistory = append(statusHistory, ts)
-			}
+		if err := json.Unmarshal([]byte(productData.AiStatusRaw), &statusHistory); err != nil {
+			log.Printf("Warning: could not parse existing ai_status, resetting: %v", err)
+			statusHistory = []string{}
 		}
 	}
 	statusHistory = append(statusHistory, currentTime)
-	newStatusValue := strings.Join(statusHistory, "\n")
+	newStatusValueBytes, _ := json.Marshal(statusHistory)
+	newStatusValue := string(newStatusValueBytes)
 
 	newStatus := productData.Status
 	if productData.Status == "DRAFT" {
@@ -452,7 +445,7 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 			"description": ai.MetaDescription,
 			"title": seo_title,
 		},
-		"metafields": []map[string]interface{}{
+		"metafields": []map[string]string{
 			{"namespace": "custom", "key": "tone",             "type": "single_line_text_field", "value": ai.Tone},
 			{"namespace": "custom", "key": "recipient_child",  "type": "boolean",                "value": fmt.Sprintf("%v", ai.RecipientKid)},
 			{"namespace": "custom", "key": "recipient_gender", "type": "single_line_text_field", "value": ai.RecipientGender},
