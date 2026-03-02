@@ -461,8 +461,8 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 			{"namespace": "custom", "key": "rating_sexual",    "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingSexual)},
 			{"namespace": "custom", "key": "rating_nudity",    "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingNudity)},
 			{"namespace": "custom", "key": "rating_political", "type": "number_integer",         "value": fmt.Sprintf("%d", ai.RatingPolitical)},
-			{"namespace": "custom", "key": "ai_json",          "type": "json",                   "value": json.RawMessage(fullAiJSON)},
-			{"namespace": "custom", "key": "ai_status",        "type": "list.date_time",         "value": string(newStatusValue)},
+			{"namespace": "custom", "key": "ai_json",          "type": "json",                   "value": string(fullAiJSON)},
+			{"namespace": "custom", "key": "ai_status",        "type": "list.date_time",         "value": newStatusValue},
 		},
 	}
 
