@@ -525,14 +525,20 @@ func fetchDetailedProduct(ctx context.Context, id string, token string) (*Shopif
 	product := &resp.Data.Product
 
 	if toneResp, err := sendGraphQL(ctx, toneQuery, nil, token); err == nil {
+		debugJSON, _ := json.Marshal(toneResp)
+		log.Printf("[DEBUG] TONE BODY: %s", string(debugJSON))
 		product.ToneOptions = toneResp.Data.ToneOptions
 	}
 
 	if groupResp, err := sendGraphQL(ctx, groupQuery, nil, token); err == nil {
+		debugJSON, _ := json.Marshal(groupResp)
+		log.Printf("[DEBUG] GROUP BODY: %s", string(debugJSON))
 		product.GroupOptions = groupResp.Data.GroupOptions
 	}
 
 	if genderResp, err := sendGraphQL(ctx, genderQuery, nil, token); err == nil {
+		debugJSON, _ := json.Marshal(genderResp)
+		log.Printf("[DEBUG] GENDER BODY: %s", string(debugJSON))
 		product.GenderOptions = genderResp.Data.GenderOptions
 	}
 
