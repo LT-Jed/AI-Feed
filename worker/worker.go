@@ -230,6 +230,10 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 		occasionName = "general"
 	}
 
+	log.Printf("[DEBUG] GENDERS: %v", genders)
+	log.Printf("[DEBUG] GROUP: %v", groups)
+	log.Printf("[DEBUG] TONES: %v", tones)
+
 	promptText := fmt.Sprintf(`
 		ACT AS AN ECOMMERCE SEO EXPERT.
 		Product: %s (Type: %s, Occasion: %s).
@@ -353,6 +357,9 @@ func callGemini(ctx context.Context, d ShopifyProductDetails) (*GeminiResponse, 
 
 	var result GeminiResponse
 	err = json.Unmarshal([]byte(geminiRaw.Candidates[0].Content.Parts[0].Text), &result)
+
+	log.Printf("[DEBUG] AI BODY: %s", string(result))
+
 	return &result, err
 }
 
@@ -448,9 +455,6 @@ func updateShopifyCore(ctx context.Context, id string, productData ShopifyProduc
 			{"namespace": "custom", "key": "ai_status", "value": string(newStatusValue)},
 		},
 	}
-
-	inputJSON, _ := json.Marshal(input)
-    log.Printf("[DEBUG] Shopify Body: %s", string(inputJSON))
 
 	_, err := sendGraphQL(ctx, mutation, map[string]interface{}{"input": input}, token)
 	if err != nil {
